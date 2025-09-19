@@ -1,0 +1,86 @@
+Homework 1 consists of 7 tasks with basic test cases to demonstrate basic and advanced Python techniques and explore DevEdu. Below are the prompts for each Task. 
+
+**Task1:**
+Write a Python script that prints "Hello, World!" on the
+console. Set up a pytest test case that verifies the output of your script. - Docs.
+
+**Task2:**
+Demonstrate the use of various data types, including integers,
+floating-point numbers, strings, and boolean. Implement a Python using pytest to test case for each
+data type, ensuring that the script’s behavior matches the expected outcomes.
+
+**Task3:**
+Create an if statement to check if a given number is positive,
+negative, or zero. Implement a for loop to print the first 10 prime numbers (you may need to
+research how to calculate prime numbers). Create a while loop to find the sum of all numbers from
+1 to 100. Write pytest test cases to verify the correctness of your code for each control structure.
+
+**Task4:**
+Duck typing is the functionality of a language where "if it looks like a duck and quacks like a duck,
+you might as well treat it like a duck." This is quite common in interpreted languages. Create a
+new file named task4.py that calculates the final price of a product after applying a given discount
+percentage inside of a function named calculate_discount. The function should accept any numeric
+type for price and discount. Write pytest test cases to test the calculate_discount function with
+various types (integers, floats) for price and discount.
+
+**Task5:**
+Create a list of your favorite books, including book
+titles and authors. Use list slicing to print the first three books in the list. Create a dictionary that
+represents a basic student database, including student names and their corresponding student IDs.
+Implement pytest test cases to verify the correctness of your code for each data structure.
+
+**Task6:**
+Write a program inside task6.py of that reads task6_read_me.txt and counts the number
+of words in it. Include pytest test cases that verify the word count for each text file.
+
+**Task7:**
+Use pip package manager to add a Python package of your choice to your project (e.g., requests,
+numpy, matplotlib). Create a new file named task7.py and write a Python script that demonstrates
+how to use the chosen package to perform a specific task or function. Implement pytest test cases
+to verify the correctness of your code when using the package.
+
+All task descriptions are provided from homework_1_advance_software.pdf for CS4300 Advanced Software Engineering
+
+
+
+## File Structure
+cs4300 /
+|-- homework1 /
+| |-- src/
+| | |-- task1 .py
+| | |-- task2 .py
+| | |-- task3 .py
+| | |-- task4 .py
+| | |-- task5 .py
+| | |-- task6 .py
+| | \-- task7 .py
+| |-- tests /
+| | |-- test_task1 .py
+| | |-- test_task2 .py
+| | |-- test_task3 .py
+| | |-- test_task4 .py
+| | |-- test_task5 .py
+| | |-- test_task6 .py
+| | \-- test_task7 .py
+| |-- task6_read_me .txt
+| \-- README .md # how to run your code and tests
+\-- homework2 /
+
+
+
+## Installations / Dependencies
+
+- Python 3.x (tested with 3.12.3)  
+- `pytest` (`pip install pytest`)  
+- `numpy` (`pip install numpy`)  
+- `regex` (`pip install regex`)  
+
+
+
+## How to Run
+
+1. Open a terminal and navigate to the `homework1` directory.  
+2. Ensure all dependencies are installed.  
+3. Run all tests using pytest:
+
+    pytest
