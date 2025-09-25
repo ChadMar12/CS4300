@@ -1,7 +1,5 @@
 from django.db import models
 
-# Movie, Seat, and Booking
-
 # Create your models here.
 
 # Movie: title, description, release date, duration.
@@ -11,10 +9,17 @@ class Movie(models.Model):
     release_date = models.DateTimeField("date published")
     duration = models.TimeField()
 
+    def __str__(self):
+        return self.title
+
 #Seat: seat number, booking status.
 class Seat(models.Model):
     seat_number = models.PositiveIntegerField()
     booking_status = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Seat: {self.seat_number}'
+
 
 #Booking: movie, seat, user, booking date
 class Booking(models.Model):
@@ -22,6 +27,9 @@ class Booking(models.Model):
     seat = models.PositiveIntegerField()
     user = models.CharField(max_length=200)
     booking_date = models.DateTimeField()
+
+    def __str__(self):
+        return f'{self.user} Movie:{self.movie} Seat:{self.seat} Date:{self.booking_date}'
 
 
 # will import this once I need it 
