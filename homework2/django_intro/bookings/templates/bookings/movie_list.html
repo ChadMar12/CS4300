@@ -1,0 +1,63 @@
+{% extends "bookings/base.html" %}
+{% block title %}Movie List{% endblock %}
+
+{% block content %}
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3 m-0">Available Movies</h1>
+    <button id="refreshBtn" class="btn btn-outline-primary btn-sm">Refresh</button>
+  </div>
+
+  <div id="moviesGrid" class="row g-3">
+    <!-- Cards injected here -->
+  </div>
+
+  <div id="emptyState" class="text-center text-muted py-5 d-none">
+    <p class="mb-0">No movies found.</p>
+  </div>
+{% endblock %}
+
+{% block body_extras %}
+<script>
+  const MOVIES_URL = "/api/movies/";
+
+  async function loadMovies() {
+    const grid = document.getElementById("moviesGrid");
+    const empty = document.getElementById("emptyState");
+    grid.innerHTML = "";
+    empty.classList.add("d-none");
+
+    try {
+      const res = await fetch(MOVIES_URL);
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        empty.classList.remove("d-none");
+        return;
+      }
+
+      data.forEach(m => {
+        const card = document.createElement("div");
+        card.className = "col-12 col-sm-6 col-lg-4";
+        card.innerHTML = `
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">${m.title ?? "Untitled"}</h5>
+              <p class="card-text">${m.description ?? ""}</p>
+              <div class="small text-muted">
+                <div><strong>Release:</strong> ${m.release_date ? new Date(m.release_date).toLocaleString() : "-"}</div>
+                <div><strong>Duration:</strong> ${m.duration ?? "-"}</div>
+              </div>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      });
+    } catch (e) {
+      console.error(e);
+      empty.classList.remove("d-none");
+      empty.textContent = "Failed to load movies.";
+    }
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadMovies);
+  loadMovies();
+</script>
+{% endblock %}

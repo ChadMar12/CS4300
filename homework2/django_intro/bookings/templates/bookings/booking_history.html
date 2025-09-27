@@ -1,0 +1,69 @@
+{% extends "bookings/base.html" %}
+{% block title %}Booking History{% endblock %}
+
+{% block content %}
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3 m-0">Your Booking History</h1>
+    <button id="refreshBtn" class="btn btn-outline-primary btn-sm">Refresh</button>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Movie</th>
+              <th scope="col">Seat</th>
+              <th scope="col">Date</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="text-center text-muted py-3 d-none">No bookings yet.</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block body_extras %}
+<script>
+  const BOOKINGS_URL = "/api/bookings/";
+
+  async function loadBookings() {
+    const body = document.getElementById("historyBody");
+    const empty = document.getElementById("emptyState");
+    body.innerHTML = "";
+    empty.classList.add("d-none");
+
+    try {
+      const res = await fetch(BOOKINGS_URL);
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        empty.classList.remove("d-none");
+        return;
+      }
+
+      data.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${b.user ?? "-"}</td>
+          <td>${b.movie ?? "-"}</td>
+          <td>${b.seat ?? "-"}</td>
+          <td>${b.booking_date ? new Date(b.booking_date).toLocaleString() : "-"}</td>
+        `;
+        body.appendChild(tr);
+      });
+    } catch (e) {
+      console.error(e);
+      empty.classList.remove("d-none");
+      empty.textContent = "Failed to load bookings.";
+    }
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadBookings);
+  loadBookings();
+</script>
+{% endblock %}

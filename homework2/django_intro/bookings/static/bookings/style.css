@@ -1,0 +1,45 @@
+/* bookings/static/bookings/style.css */
+
+/* Change the body background */
+body {
+    background-color: #f0f2f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* Style navbar */
+  .navbar {
+    background-color: #2c3e50 !important;
+  }
+  .navbar .nav-link {
+    color: #ecf0f1 !important;
+  }
+  .navbar .nav-link:hover {
+    color: #f39c12 !important;
+  }
+  
+  /* Style cards */
+  .card {
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+  }
+  .btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+  }
+  
+  /* Tables */
+  .table th {
+    background-color: #2c3e50;
+    color: #fff;
+  }
+  

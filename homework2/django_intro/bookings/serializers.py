@@ -11,6 +11,7 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = '__all__'
 
+
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat

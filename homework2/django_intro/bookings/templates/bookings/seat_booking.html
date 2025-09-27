@@ -1,0 +1,126 @@
+{% extends "bookings/base.html" %}
+{% block title %}Seat Booking{% endblock %}
+
+{% block content %}
+  <h1 class="h3 mb-3">Book a Seat</h1>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form id="bookingForm" class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Movie</label>
+          <select id="movieSelect" class="form-select" required></select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Seat</label>
+          <select id="seatSelect" class="form-select" required></select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">User</label>
+          <input id="userInput" type="text" class="form-control" placeholder="Your name" required />
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Book Seat</button>
+          <button class="btn btn-outline-secondary ms-2" type="button" id="reloadSeats">Reload Seats</button>
+        </div>
+      </form>
+
+      <div id="alertBox" class="alert mt-3 d-none" role="alert"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block body_extras %}
+<script>
+  const MOVIES_URL   = "/api/movies/";
+  const SEATS_URL    = "/api/seats/";
+  const BOOKINGS_URL = "/api/bookings/";
+
+  const movieSelect = document.getElementById("movieSelect");
+  const seatSelect  = document.getElementById("seatSelect");
+  const userInput   = document.getElementById("userInput");
+  const alertBox    = document.getElementById("alertBox");
+
+  function showAlert(msg, type="success") {
+    alertBox.textContent = msg;
+    alertBox.className = `alert alert-${type} mt-3`;
+  }
+  function hideAlert() {
+    alertBox.className = "alert mt-3 d-none";
+    alertBox.textContent = "";
+  }
+
+  async function loadMovies() {
+    const res = await fetch(MOVIES_URL);
+    const data = await res.json();
+    movieSelect.innerHTML = "";
+    (data || []).forEach(m => {
+      const opt = document.createElement("option");
+      // Your Booking model stores movie as a CharField, so we’ll POST the title
+      opt.value = m.title;
+      opt.textContent = m.title;
+      movieSelect.appendChild(opt);
+    });
+  }
+
+  async function loadSeats() {
+    const res = await fetch(SEATS_URL);
+    const data = await res.json();
+    seatSelect.innerHTML = "";
+    (data || []).forEach(s => {
+      // Only show unbooked seats (booking_status === false)
+      if (!s.booking_status) {
+        const opt = document.createElement("option");
+        // Your Booking model stores seat as a number, so we’ll POST seat_number
+        opt.value = s.seat_number;
+        opt.textContent = `Seat ${s.seat_number}`;
+        seatSelect.appendChild(opt);
+      }
+    });
+  }
+
+  async function createBooking(e) {
+    e.preventDefault();
+    hideAlert();
+
+    const payload = {
+      movie: movieSelect.value,
+      seat: parseInt(seatSelect.value, 10),
+      user: userInput.value,
+      // backend may set this automatically; but since your model requires it, send now
+      booking_date: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(BOOKINGS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...csrfHeaders()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        showAlert(`Booking failed: ${err}`, "danger");
+        return;
+      }
+
+      showAlert("Seat booked successfully! 🎟️", "success");
+      await loadSeats(); // refresh seats to hide the one we just booked
+      document.getElementById("bookingForm").reset();
+    } catch (e) {
+      console.error(e);
+      showAlert("Network error while booking.", "danger");
+    }
+  }
+
+  document.getElementById("bookingForm").addEventListener("submit", createBooking);
+  document.getElementById("reloadSeats").addEventListener("click", loadSeats);
+
+  // Initial loads
+  loadMovies();
+  loadSeats();
+</script>
+{% endblock %}
