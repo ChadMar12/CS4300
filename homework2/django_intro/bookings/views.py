@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
-from .models import Movie, Seat, Booking
+from bookings.models import Movie, Seat, Booking
+from bookings.serializers import MovieSerializer, SeatSerializer, BookingSerializer
 
 
 # Create your views here.
@@ -10,33 +11,30 @@ from .models import Movie, Seat, Booking
 #Empty for the time being
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     
-    def create(self, request) :
-        pass 
+    queryset = Movie.objets.all()
+    serializers_class = ModelSerializer
 
-    def read(self, request):
-        pass
-
-    def update(self, request):
+    def create(self, request):
         pass
     
-    def destroy(self, request):
+    def update(self, request, pk=None):
         pass
     
+    def read(self, request, pk=None):
+        pass
+    
+    def destroy(self, request, pk=None):
+        pass
+
 #SeatViewSet: For seat availability and booking.
 class SeatViewSet():
     
-    def seat_availability():
-        pass
-    
-    def book_seat():
-        pass
- 
+    queryset = Movie.objets.all()
+    serializers_class = SeatSerializer
+     
 
 #BookingViewSet: For users to book seats and view their booking history.
 class BookingViewSet():
 
-    def book_seat():
-        pass
-    
-    def view_seat():
-        pass
+    queryset = Movie.objets.all()
+    serializers_class = BookingSerializer
