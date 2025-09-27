@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 # Movie: title, description, release date, duration.
@@ -19,13 +20,12 @@ class Seat(models.Model):
     def __str__(self):
         return f'Seat: {self.seat_number}'
 
-
-#Booking: movie, seat, user, booking date
+# Booking: this is the back bone class of our movie app, from here we should be able to create and destroy a movie booking
 class Booking(models.Model):
-    movie = models.CharField(max_length=200)
-    seat = models.PositiveIntegerField()
-    user = models.CharField(max_length=200)
-    booking_date = models.DateTimeField()
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+    seat = models.ForeignKey(Seat, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    booking_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'{self.user} Movie:{self.movie} Seat:{self.seat} Date:{self.booking_date}'
@@ -38,4 +38,11 @@ class Booking(models.Model):
 #     seat = models.ForeignKey(Seat, on_delete=models.CASCADE)
 #     user = models.ForeignKey(User, on_delete=models.CASCADE)
 #     booking_date = models.DateTimeField(auto_now_add=True)
+
+# #Booking: movie, seat, user, booking date
+# class Booking(models.Model):
+#     movie = models.CharField(max_length=200)
+#     seat = models.PositiveIntegerField()
+#     user = models.CharField(max_length=200)
+#     booking_date = models.DateTimeField()
 

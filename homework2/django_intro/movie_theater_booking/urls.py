@@ -18,7 +18,16 @@ Including another URLconf
 from django.urls import path, include
 
 urlpatterns = [
-    #path('admin/', admin.site.urls),
-    path('', include('bookings.urls')),
-    path("bookings/", include("bookings.pages_urls")),
+    # #path('admin/', admin.site.urls),
+    # path('', include('bookings.urls')),
+    # path("bookings/", include(("bookings.pages_urls", "bookings"), namespace="bookings")),
+
+
+    # Templates (your styled pages) at the site root:
+    path("", include("bookings.pages_urls")),
+
+    # DRF API under /api/...
+    path("api/", include("bookings.urls")),
+    
 ]
+
