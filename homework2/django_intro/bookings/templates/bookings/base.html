@@ -113,7 +113,7 @@
     <!-- Header / Nav -->
     <div class="header">
       <nav>
-        <a href="{% url 'bookings:movie_list' %}">
+        <a href="{% url 'bookings:home' %}">
           <img src="{% static 'bookings/cinetix2.png' %}" class="logo" alt="Cinetix" />
         </a>
         <ul>
@@ -140,7 +140,7 @@
           <img src="{% static 'bookings/one-battle-after-another-web.jpg' %}" class="feature-film-1" alt="One Battle After Another" />
           <div class="text-and-button">
             <p class="text">Your battle ends here.</p>
-            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+            <a href="{% url 'bookings:movie_detail' movie_id=1054867 %}" class="get-tickets-feature-1">Get Tickets</a>
           </div>
         </div>
 
@@ -149,7 +149,7 @@
           <img src="{% static 'bookings/demon slayer movie poster.webp' %}" class="feature-film-1" alt="Demon Slayer" />
           <div class="text-and-button">
             <p class="text">Heroes rise. Demons fall.</p>
-            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+            <a href="{% url 'bookings:movie_detail' movie_id=1311031 %}" class="get-tickets-feature-1">Get Tickets</a>
           </div>
         </div>
 
@@ -158,7 +158,7 @@
           <img src="{% static 'bookings/gabbys dollhouse movie poster.webp' %}" class="feature-film-1" alt="Gabby's Dollhouse: The Movie" />
           <div class="text-and-button">
             <p class="text">A new adventure awaits – only in theaters</p>
-            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+            <a href="{% url 'bookings:movie_detail' movie_id=1280282 %}" class="get-tickets-feature-1">Get Tickets</a>
           </div>
         </div>
 
@@ -274,7 +274,7 @@
           const title = node.querySelector(".title");
 
           // Django URL pattern
-          link.href = `/bookings/movie/${movie.id}/`;
+          link.href = `/movie/${movie.id}/`;
           link.setAttribute("aria-label", movie.title || "Movie");
 
           img.src = movie.poster_path ? (IMG_BASE + movie.poster_path) : "{% static 'bookings/fallback-poster.jpg' %}";

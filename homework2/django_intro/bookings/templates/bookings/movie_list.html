@@ -97,7 +97,7 @@
   <!-- Header / Nav -->
   <div class="header">
     <nav>
-      <a href="{% url 'bookings:movie_list' %}" aria-label="Home">
+      <a href="{% url 'bookings:home' %}" aria-label="Home">
         <img src="{% static 'bookings/cinetix2.png' %}" class="logo" alt="Cinetix" />
       </a>
       <ul>
@@ -289,7 +289,16 @@
     const selectionSummary = document.getElementById("selectionSummary");
     const buyBtn = document.getElementById("buyBtn");
 
-    function qid(){ return new URLSearchParams(location.search).get("id"); }
+    function qid(){ 
+      // Check URL params first (?id=123)
+      const urlParam = new URLSearchParams(location.search).get("id");
+      if (urlParam) return urlParam;
+      
+      // Check Django URL pattern (/movie/123/)
+      const match = location.pathname.match(/\/movie\/(\d+)\/?$/);
+      return match ? match[1] : null;
+    }
+    
     function minsToHM(mins){ if(mins==null) return "–"; const h=Math.floor(mins/60), m=mins%60; return `${h}h ${m}m`; }
     const PrettyTitle = {
       now_playing: "Now Playing",
@@ -324,7 +333,7 @@
       const img   = node.querySelector(".poster");
       const title = node.querySelector(".title");
 
-      link.href = `/bookings/movie/${movie.id}/`;
+      link.href = `/movie/${movie.id}/`;
       link.setAttribute("aria-label", movie.title || "Movie");
       img.src = movie.poster_path ? IMG_BASE+movie.poster_path : "{% static 'bookings/fallback-poster.jpg' %}";
       img.alt = movie.title || "Movie";
@@ -420,7 +429,7 @@
           theater: selection.theater || ""
         });
 
-        window.location.href = `/bookings/seat-booking/?${params.toString()}`;
+        window.location.href = `/seat-booking/?${params.toString()}`;
       };
     }
 
