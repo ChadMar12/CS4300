@@ -1,13 +1,451 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Movie List</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'bookings/style.css' %}">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cinetix – Movies</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet" />
+
+  <!-- Site CSS -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'bookings/styles.css' %}" />
+
+  <!-- Page-specific CSS -->
+  <style>
+    [hidden]{display:none!important;}
+
+    .movie-layout,.crumbs,.sticky-inner{max-width:1160px;margin:0 auto;}
+    .movie-layout{
+      margin:24px auto; padding:24px; background:#1f1f1f;
+      border:1px solid #2a2a2a; border-radius:12px; box-shadow:none;
+    }
+    .crumbs{margin-top:18px;color:var(--muted);}
+    .back-link{color:var(--accent);text-decoration:none;}
+
+    .top-row{
+      display:grid; grid-template-columns:300px 1fr 480px;
+      column-gap:24px; align-items:start;
+    }
+    .poster{display:block;width:100%;height:auto;border-radius:8px;box-shadow:none;}
+
+    .trailer-col{background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:8px;overflow:hidden;}
+    .trailer-frame{width:100%;height:260px;border:0;border-radius:6px;display:block;}
+
+    .movie-title{margin:0 0 10px;color:var(--text);}
+    .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 12px;}
+    .fact b{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+    .fact span{color:var(--text);}
+    .synopsis{margin-top:8px;color:var(--muted);line-height:1.5;}
+
+    .day-strip{display:flex;gap:10px;margin:14px 0 0;}
+    .day-pill{
+      min-width:72px;padding:8px 10px;border-radius:8px;background:#2a2a2a;
+      border:1px solid #3a3a3a;cursor:pointer;text-align:left;
+    }
+    .day-pill .dow{font-size:11px;color:var(--muted);}
+    .day-pill .dom{font-size:18px;line-height:1;font-weight:700;}
+    .day-pill .mon{font-size:11px;opacity:.9;}
+    .day-pill.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(253,185,74,.22);}
+
+    .theater-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:18px;}
+    .theater-card{background:#232323;border:1px solid #2e2e2e;border-radius:10px;padding:14px;}
+    .theater-name{font-weight:700;margin-bottom:10px;color:var(--text);}
+    .showtimes{display:flex;flex-wrap:wrap;gap:10px;}
+    .time-btn{
+      padding:9px 14px;border-radius:22px;background:var(--accent);color:#1b1406;
+      border:none;font-weight:700;cursor:pointer;
+    }
+    .time-btn.selected{outline:3px solid rgba(253,185,74,.35);}
+
+    .sticky-book{position:sticky;bottom:0;background:#161616;border-top:1px solid #2b2b2b;padding:12px 16px;margin-top:24px;}
+    .sticky-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .buy-btn{background:var(--accent);color:#1b1406;border:none;padding:12px 20px;border-radius:999px;font-weight:800;min-width:180px;}
+
+    .list-controls{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin:8px 0 16px;
+    }
+    .category-select{
+      background:#232323; color:var(--text); border:1px solid #2e2e2e;
+      padding:10px 12px; border-radius:10px; font-size:15px;
+    }
+    .load-more-wrap{display:flex; justify-content:center; margin:20px 0 0;}
+    .load-more-btn{
+      background:#2a2a2a; color:var(--text); border:1px solid #3a3a3a;
+      padding:10px 16px; border-radius:999px; cursor:pointer;
+    }
+
+    @media (max-width:1200px){
+      .top-row{grid-template-columns:300px 1fr;}
+      .trailer-col{grid-column:1 / -1;}
+      .theater-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+    @media (max-width:760px){
+      .top-row{grid-template-columns:1fr;}
+      .theater-grid{grid-template-columns:1fr;}
+      .list-controls{flex-direction:column; align-items:flex-start;}
+      .category-select{width:100%;}
+    }
+  </style>
 </head>
 <body>
-    <h1>Movie List Page</h1>
-    <p> This is the page to find a movie </p>
-    <a href="{% url 'bookings:home' %}"><button>Back to Home</button></a>
+  <!-- Header / Nav -->
+  <div class="header">
+    <nav>
+      <a href="{% url 'bookings:movie_list' %}" aria-label="Home">
+        <img src="{% static 'bookings/cinetix2.png' %}" class="logo" alt="Cinetix" />
+      </a>
+      <ul>
+        <li><a href="{% url 'bookings:movie_list' %}">Movies</a></li>
+        <li><a href="{% url 'bookings:booking_history' %}">My Tickets</a></li>
+        <li><a href="#">Theaters</a></li>
+      </ul>
+        <div class="user">
+          <img src="{% static 'bookings/user.png' %}" alt="user">
+          <li><a href="{% url 'bookings:booking_history' %}">User</a></li>
+      </div>
+    </nav>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div class="body movies-page" id="listView">
+    <section class="movies">
+      <div class="list-controls">
+        <h2 class="section-title" id="listTitle">Now Playing</h2>
+
+        <label for="categorySelect" class="visually-hidden">Category</label>
+        <select id="categorySelect" class="category-select" aria-label="Choose movie list">
+          <option value="now_playing">Now Playing</option>
+          <option value="popular">Popular</option>
+          <option value="top_rated">Top Rated</option>
+          <option value="upcoming">Upcoming</option>
+        </select>
+      </div>
+
+      <div id="movie-grid" class="movie-grid"></div>
+
+      <div class="load-more-wrap">
+        <button id="loadMoreBtn" class="load-more-btn" hidden>Load more</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <main id="detailView" hidden>
+    <div class="crumbs">
+      <a href="{% url 'bookings:movie_list' %}" class="back-link">← Back to all movies</a>
+    </div>
+
+    <section class="movie-layout">
+      <div class="top-row">
+        <div><img id="dPoster" class="poster" alt="" /></div>
+
+        <div>
+          <h1 id="dTitle" class="movie-title chewy-regular"></h1>
+
+          <div class="facts">
+            <div class="fact"><b>Rating</b><span id="dRating">–</span></div>
+            <div class="fact"><b>Runtime</b><span id="dRuntime">–</span></div>
+            <div class="fact"><b>Release date</b><span id="dRelease">–</span></div>
+          </div>
+
+          <p id="dOverview" class="synopsis"></p>
+
+          <div class="day-strip" id="dayStrip" aria-label="Choose a date"></div>
+        </div>
+
+        <div class="trailer-col">
+          <iframe id="dTrailer" class="trailer-frame" title="Trailer"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen></iframe>
+        </div>
+      </div>
+
+      <div class="theater-grid" id="theaterGrid">
+        <article class="theater-card" data-theater="The Grand Picture Palace">
+          <div class="theater-name">The Grand Picture Palace</div>
+          <div class="showtimes">
+            <button class="time-btn">1:00pm</button><button class="time-btn">4:00pm</button>
+            <button class="time-btn">7:00pm</button><button class="time-btn">9:45pm</button>
+          </div>
+        </article>
+
+        <article class="theater-card" data-theater="The Stellar Screen">
+          <div class="theater-name">The Stellar Screen</div>
+          <div class="showtimes">
+            <button class="time-btn">1:15pm</button><button class="time-btn">4:15pm</button>
+            <button class="time-btn">7:15pm</button><button class="time-btn">10:15pm</button>
+          </div>
+        </article>
+
+        <article class="theater-card" data-theater="The Flicker House">
+          <div class="theater-name">The Flicker House</div>
+          <div class="showtimes">
+            <button class="time-btn">1:00pm</button><button class="time-btn">4:30pm</button>
+            <button class="time-btn">7:30pm</button><button class="time-btn">9:45pm</button>
+          </div>
+        </article>
+
+        <article class="theater-card" data-theater="Marquee Dreams Cinema">
+          <div class="theater-name">Marquee Dreams Cinema</div>
+          <div class="showtimes">
+            <button class="time-btn">1:15pm</button><button class="time-btn">4:15pm</button>
+            <button class="time-btn">7:15pm</button><button class="time-btn">10:15pm</button>
+          </div>
+        </article>
+
+        <article class="theater-card" data-theater="The Reel Escape">
+          <div class="theater-name">The Reel Escape</div>
+          <div class="showtimes">
+            <button class="time-btn">1:30pm</button><button class="time-btn">4:30pm</button>
+            <button class="time-btn">7:00pm</button><button class="time-btn">10:00pm</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="sticky-book">
+        <div class="sticky-inner">
+          <div id="selectionSummary">Select a day, theater, and time to continue.</div>
+          <button class="buy-btn" id="buyBtn" disabled>Continue</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <h3>CINETIX</h3>
+        <p class="muted">Movie tickets, trailers &amp; showtimes.</p>
+      </div>
+      <div>
+        <h4>Movies</h4>
+        <a href="#">Features</a>
+        <a href="#">Now Playing</a>
+        <a href="#">Coming Soon</a>
+      </div>
+      <div>
+        <h4>About Us</h4>
+        <a href="#">Our Mission / Story</a>
+        <a href="#">Careers</a>
+      </div>
+      <div>
+        <h4>Support &amp; Contact</h4>
+        <a href="#">Contact Us</a>
+        <a href="#">FAQ</a>
+        <a href="#">Customer Service</a>
+      </div>
+      <div>
+        <h4>Legal &amp; Privacy</h4>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Use</a>
+        <a href="#">Cookie Settings</a>
+        <a href="#">Licensing</a>
+        <a href="#">Information</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- API key -->
+  <script>
+    const API_KEY = "{{ TMDB_API_KEY }}";
+  </script>
+
+  <template id="movie-card-tpl">
+    <article class="movie-card">
+      <a class="card-link" href="#" target="_self" rel="noopener">
+        <img class="poster" alt="" />
+        <h3 class="title"></h3>
+      </a>
+    </article>
+  </template>
+
+  <script>
+    const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+
+    const listView   = document.getElementById("listView");
+    const detailView = document.getElementById("detailView");
+    const grid       = document.getElementById("movie-grid");
+    const tpl        = document.getElementById("movie-card-tpl");
+    const listTitle  = document.getElementById("listTitle");
+    const categorySelect = document.getElementById("categorySelect");
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    const dPoster  = document.getElementById("dPoster");
+    const dTitle   = document.getElementById("dTitle");
+    const dRating  = document.getElementById("dRating");
+    const dRuntime = document.getElementById("dRuntime");
+    const dRelease = document.getElementById("dRelease");
+    const dOverview= document.getElementById("dOverview");
+    const dTrailer = document.getElementById("dTrailer");
+    const dayStrip = document.getElementById("dayStrip");
+    const theaterGrid = document.getElementById("theaterGrid");
+    const selectionSummary = document.getElementById("selectionSummary");
+    const buyBtn = document.getElementById("buyBtn");
+
+    function qid(){ return new URLSearchParams(location.search).get("id"); }
+    function minsToHM(mins){ if(mins==null) return "–"; const h=Math.floor(mins/60), m=mins%60; return `${h}h ${m}m`; }
+    const PrettyTitle = {
+      now_playing: "Now Playing",
+      popular: "Popular",
+      top_rated: "Top Rated",
+      upcoming: "Upcoming"
+    };
+
+    let currentCategory = "now_playing";
+    let currentPage = 1;
+    let totalPages = 1;
+
+    async function fetchList(category="now_playing", page=1){
+      const safe = ["now_playing","popular","top_rated","upcoming"].includes(category) ? category : "now_playing";
+      const url = `https://api.themoviedb.org/3/movie/${safe}?api_key=${API_KEY}&language=en-US&page=${page}`;
+      const r = await fetch(url);
+      if(!r.ok) return {results:[], page:1, total_pages:1};
+      return r.json();
+    }
+    async function fetchDetails(id){
+      const url = `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&language=en-US`;
+      const r = await fetch(url); if(!r.ok) throw new Error("details failed"); return r.json();
+    }
+    async function fetchVideos(id){
+      const url = `https://api.themoviedb.org/3/movie/${id}/videos?api_key=${API_KEY}&language=en-US`;
+      const r = await fetch(url); if(!r.ok) return {results:[]}; return r.json();
+    }
+
+    function addCard(movie){
+      const node  = tpl.content.cloneNode(true);
+      const link  = node.querySelector(".card-link");
+      const img   = node.querySelector(".poster");
+      const title = node.querySelector(".title");
+
+      link.href = `/bookings/movie/${movie.id}/`;
+      link.setAttribute("aria-label", movie.title || "Movie");
+      img.src = movie.poster_path ? IMG_BASE+movie.poster_path : "{% static 'bookings/fallback-poster.jpg' %}";
+      img.alt = movie.title || "Movie";
+      title.textContent = movie.title || "Untitled";
+
+      grid.appendChild(node);
+    }
+
+    async function renderList(reset=false){
+      listView.hidden = false; detailView.hidden = true;
+
+      if(reset){
+        grid.innerHTML = "";
+        currentPage = 1;
+      }
+
+      listTitle.textContent = PrettyTitle[currentCategory] || "Movies";
+
+      const data = await fetchList(currentCategory, currentPage);
+      totalPages = data.total_pages || 1;
+
+      (data.results || []).forEach(addCard);
+
+      loadMoreBtn.hidden = !(currentPage < totalPages);
+    }
+
+    function buildDayPill(date){
+      const pill = document.createElement("button");
+      pill.className = "day-pill"; pill.type = "button";
+      pill.dataset.dateIso = date.toISOString().slice(0,10);
+      const dow = new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(date);
+      const mon = new Intl.DateTimeFormat(undefined,{month:"short"}).format(date);
+      const dom = date.getDate();
+      pill.innerHTML = `<div class="dow">${dow}</div><div class="dom">${dom}</div><div class="mon">${mon}</div>`;
+      return pill;
+    }
+    function fillNext7Days(){
+      dayStrip.innerHTML = "";
+      const today = new Date();
+      for(let i=0;i<7;i++){ const d=new Date(today); d.setDate(today.getDate()+i); dayStrip.appendChild(buildDayPill(d)); }
+      dayStrip.firstElementChild?.classList.add("selected");
+    }
+
+    const selection = {date:null,theater:null,time:null};
+    function updateSummary(){
+      const dateText = selection.date ? new Date(selection.date).toDateString() : "–";
+      selectionSummary.textContent = `Date: ${dateText}  |  Theater: ${selection.theater||"–"}  |  Time: ${selection.time||"–"}`;
+      buyBtn.disabled = !(selection.date && selection.theater && selection.time);
+    }
+
+    async function renderDetail(id){
+      listView.hidden = true; detailView.hidden = false;
+
+      const [details,videos] = await Promise.all([fetchDetails(id), fetchVideos(id)]);
+
+      dTitle.textContent   = details.title || "Movie";
+      dPoster.src          = details.poster_path ? IMG_BASE+details.poster_path : "{% static 'bookings/fallback-poster.jpg' %}";
+      dPoster.alt          = details.title || "Movie";
+      dRating.textContent  = details.adult ? "R" : (details.vote_average ? "NR" : "NR");
+      dRuntime.textContent = minsToHM(details.runtime);
+      dRelease.textContent = details.release_date || "–";
+      dOverview.textContent= details.overview || "";
+
+      const yt = (videos.results||[]).find(v=>v.site==="YouTube" && /trailer|teaser/i.test(v.type));
+      dTrailer.src = yt ? `https://www.youtube.com/embed/${yt.key}` : "";
+
+      fillNext7Days();
+      selection.date = dayStrip.querySelector(".day-pill.selected")?.dataset.dateIso || null;
+      selection.theater = null; selection.time = null; updateSummary();
+
+      dayStrip.onclick = (e)=>{
+        const pill = e.target.closest(".day-pill"); if(!pill) return;
+        [...dayStrip.children].forEach(el=>el.classList.remove("selected"));
+        pill.classList.add("selected"); selection.date = pill.dataset.dateIso; updateSummary();
+      };
+      theaterGrid.onclick = (e)=>{
+        const btn = e.target.closest(".time-btn"); if(!btn) return;
+        const card = e.target.closest(".theater-card");
+        selection.theater = card?.dataset.theater || null;
+        card.querySelectorAll(".time-btn").forEach(b=>b.classList.remove("selected"));
+        btn.classList.add("selected"); selection.time = btn.textContent.trim(); updateSummary();
+      };
+
+      buyBtn.onclick = ()=>{
+        if(!(selection.date && selection.theater && selection.time)) return;
+
+        const params = new URLSearchParams({
+          id: String(details.id ?? id),
+          title: details.title || "Movie",
+          poster: dPoster.src || "",
+          date: selection.date,
+          time: selection.time,
+          theater: selection.theater || ""
+        });
+
+        window.location.href = `/bookings/seat-booking/?${params.toString()}`;
+      };
+    }
+
+    async function init(){
+      const id = qid();
+      if(id){ await renderDetail(id); }
+      else { await renderList(true); }
+
+      categorySelect.addEventListener("change", async ()=>{
+        currentCategory = categorySelect.value;
+        await renderList(true);
+      });
+
+      loadMoreBtn.addEventListener("click", async ()=>{
+        if(currentPage < totalPages){
+          currentPage += 1;
+          await renderList(false);
+        }
+      });
+
+      window.addEventListener("popstate", async ()=>{
+        const now = qid(); if(now) await renderDetail(now); else await renderList(true);
+      });
+    }
+    init();
+  </script>
 </body>
 </html>

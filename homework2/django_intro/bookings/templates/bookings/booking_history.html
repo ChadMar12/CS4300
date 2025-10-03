@@ -1,13 +1,224 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Booking History</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'bookings/style.css' %}">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cinetix – My Tickets</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet" />
+
+  <!-- Your site stylesheet -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'bookings/styles.css' %}" />
+
+  <style>
+    .tickets-header {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin-bottom:12px;
+    }
+    .tickets-header h1 { margin:0; }
+    .btn-clear {
+      background: var(--accent, #FDB94A);
+      color: var(--accent-ink, #1b1406);
+      border: none;
+      border-radius: 24px;
+      padding: 10px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(253,185,74,.25);
+    }
+    .btn-clear:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
+
+    .ticket-card {
+      display:grid; grid-template-columns: 90px 1fr auto; gap:14px;
+      align-items:center; background:#222; border:1px solid #333; border-radius:10px;
+      padding:12px; margin:12px 0; box-shadow:0 6px 18px rgba(0,0,0,.2);
+    }
+    .ticket-poster { width:90px; height:auto; border-radius:6px; object-fit:cover; }
+    .ticket-title { font-weight:700; font-size:1.05rem; margin-bottom:2px; }
+    .ticket-meta { color: var(--muted, #b8b3ac); font-size:.95rem; margin:2px 0; }
+    .ticket-chevron { font-size:28px; color: var(--muted, #b8b3ac); padding:0 6px; }
+
+    .seat-badges { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .seat-badge {
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      background:#2f6bd1; color:#fff; font-size:.85rem; line-height:1;
+    }
+
+    .tickets-empty { color: var(--muted, #b8b3ac); margin:8px 0 0 0; }
+  </style>
 </head>
-<body>
-    <h1>Booking History Page</h1>
-    <p> This is the page to view seats you have booked </p>
-    <a href="{% url 'bookings:home' %}"><button>Back to Home</button></a>
+<body class="page">
+  <!-- Header / Nav -->
+  <div class="header">
+    <nav>
+      <a href="{% url 'bookings:movie_list' %}" aria-label="Home">
+        <img src="{% static 'bookings/cinetix2.png' %}" class="logo" alt="Cinetix" />
+      </a>
+      <ul>
+        <li><a href="{% url 'bookings:movie_list' %}">Movies</a></li>
+        <li><a href="{% url 'bookings:booking_history' %}">My Tickets</a></li>
+        <li><a href="#">Theaters</a></li>
+      </ul>
+      <div class="user">
+        <img src="{% static 'bookings/user.png' %}" alt="user">
+        <li><a href="{% url 'bookings:booking_history' %}">User</a></li>
+      </div>
+    </nav>
+  </div>
+
+  <!-- MAIN -->
+  <main class="page-main">
+    <div class="tickets">
+      <div class="tickets-header">
+        <h1>My Tickets</h1>
+        <button id="btnClear" class="btn-clear" title="Remove all saved tickets">Clear all tickets</button>
+      </div>
+
+      <div class="ticket-list" id="ticketList"></div>
+    </div>
+
+    <!-- Template for each ticket -->
+    <template id="ticketTpl">
+      <article class="ticket-card">
+        <img class="ticket-poster" alt="">
+        <div class="ticket-info">
+          <div class="ticket-title"></div>
+          <div class="ticket-meta theater"></div>
+          <div class="ticket-meta datetime"></div>
+          <div class="ticket-meta runtime"></div>
+          <div class="seat-badges"></div>
+        </div>
+        <div class="ticket-chevron">›</div>
+      </article>
+    </template>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <h3>CINETIX</h3>
+        <p class="muted">Movie tickets, trailers &amp; showtimes.</p>
+      </div>
+      <div>
+        <h4>Movies</h4>
+        <a href="#">Features</a>
+        <a href="#">Now Playing</a>
+        <a href="#">Coming Soon</a>
+      </div>
+      <div>
+        <h4>About Us</h4>
+        <a href="#">Our Mission / Story</a>
+        <a href="#">Careers</a>
+      </div>
+      <div>
+        <h4>Support &amp; Contact</h4>
+        <a href="#">Contact Us</a>
+        <a href="#">FAQ</a>
+        <a href="#">Customer Service</a>
+      </div>
+      <div>
+        <h4>Legal &amp; Privacy</h4>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Use</a>
+        <a href="#">Cookie Settings</a>
+        <a href="#">Licensing</a>
+        <a href="#">Information</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const listEl = document.getElementById("ticketList");
+    const tpl = document.getElementById("ticketTpl");
+    const btnClear = document.getElementById("btnClear");
+    const IMG_FALLBACK = "{% static 'bookings/fallback-poster.jpg' %}";
+    const KEY = "cinetix_tickets";
+
+    function minsToHM(mins){
+      if(!mins || isNaN(mins)) return "";
+      const h = Math.floor(mins/60), m = mins % 60;
+      return `${h} hr ${m} min`;
+    }
+    function formatDateNice(iso){
+      if(!iso) return "";
+      const d = new Date(iso + "T00:00:00");
+      return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
+    }
+    function keyToLabel(key){
+      const [rPart, cPart] = String(key).split("-");
+      const r = parseInt((rPart||"").replace("R",""), 10);
+      const c = parseInt((cPart||"").replace("C",""), 10);
+      if (isNaN(r) || isNaN(c)) return String(key);
+      const letter = String.fromCharCode(64 + r);
+      return `${letter}${c}`;
+    }
+    function renderSeatBadges(container, ticket){
+      const labels = Array.isArray(ticket.seatLabels) && ticket.seatLabels.length
+        ? ticket.seatLabels
+        : (Array.isArray(ticket.seats) ? ticket.seats.map(keyToLabel) : []);
+      container.innerHTML = "";
+      if (!labels.length) return;
+      labels.forEach(lbl=>{
+        const span = document.createElement("span");
+        span.className = "seat-badge";
+        span.textContent = lbl;
+        container.appendChild(span);
+      });
+    }
+    function renderTicket(t){
+      const node = tpl.content.cloneNode(true);
+      node.querySelector(".ticket-poster").src = t.poster || IMG_FALLBACK;
+      node.querySelector(".ticket-poster").alt = t.title || "Movie poster";
+      node.querySelector(".ticket-title").textContent = t.title || "Untitled";
+      node.querySelector(".theater").textContent = t.theater || "";
+
+      const niceDate = formatDateNice(t.showDateISO);
+      node.querySelector(".datetime").textContent =
+        (niceDate && t.showTime) ? `${niceDate} • ${t.showTime}` : (t.showTime || niceDate || "");
+
+      node.querySelector(".runtime").textContent = minsToHM(t.runtimeMins);
+      renderSeatBadges(node.querySelector(".seat-badges"), t);
+      listEl.appendChild(node);
+    }
+    function loadTickets(){
+      let tickets = [];
+      try {
+        tickets = JSON.parse(localStorage.getItem(KEY) || "[]");
+        if (!Array.isArray(tickets)) tickets = [];
+      } catch { tickets = []; }
+      return tickets;
+    }
+    function renderTickets(tickets){
+      listEl.innerHTML = "";
+      if(!tickets.length){
+        const empty = document.createElement("p");
+        empty.className = "tickets-empty";
+        empty.textContent = "No tickets yet. Buy one and it will show here.";
+        listEl.appendChild(empty);
+        btnClear.disabled = true;
+        return;
+      }
+      btnClear.disabled = false;
+      tickets.sort((a,b)=> new Date(b.purchasedAtISO) - new Date(a.purchasedAtISO));
+      tickets.forEach(renderTicket);
+    }
+    function loadAndRender(){
+      renderTickets(loadTickets());
+    }
+    function clearAllTickets(){
+      if(!confirm("Clear all saved tickets? This cannot be undone.")) return;
+      localStorage.removeItem(KEY);
+      loadAndRender();
+    }
+
+    btnClear.addEventListener("click", clearAllTickets);
+    loadAndRender();
+  </script>
 </body>
 </html>

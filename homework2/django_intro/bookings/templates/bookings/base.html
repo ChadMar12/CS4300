@@ -1,25 +1,298 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>My Home Page</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'bookings/style.css' %}">
-</head>
-<body>
-    <h1>Welcome to my Homepage</h1>
-    <p>This is a test.</p>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cinetix – Home</title>
 
-    <!-- Navigation buttons -->
-    <nav>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet" />
+
+    <!-- Main CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'bookings/styles.css' %}" />
+
+    <!-- Slider arrows CSS -->
+    <style>
+      .feature-film-slider {
+        position: relative;
+        width: 100%;
+        max-width: 1600px;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+      .feature-film { display: none; align-items: center; color:#fff; min-height: 500px; }
+      .feature-film.active { display: flex; }
+
+      .arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0,0,0,0.5);
+        color: #fff;
+        border: none;
+        font-size: 40px;
+        padding: 10px;
+        cursor: pointer;
+        border-radius: 50%;
+        z-index: 2;
+      }
+      .arrow.left { left: 10px; }
+      .arrow.right { right: 10px; }
+      .arrow:hover { background: rgba(0,0,0,0.8); }
+    </style>
+
+    <style>
+      /* Default */
+      .feature-film {
+        width: 100%;
+        max-width: 1600px;
+        min-height: 500px;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        color: #fff;
+      }
+
+      .feature-film-1 {
+        width: 1000px;
+        max-width: 100%;
+        height: auto;
+      }
+
+      .text-and-button {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 520px;
+        min-height: 100%;
+        padding: 20px;
+      }
+
+      .text {
+        font-size: 50px;
+        margin: 0 0 20px 32px;
+        color: #fff;
+      }
+
+      .get-tickets-feature-1 {
+        display: inline-block;
+        text-align: center;
+        margin: 30px 0 0 150px;
+        text-decoration: none;
+        padding: 16px 0;
+        font-size: 32px;
+        font-weight: bold;
+        border-radius: 40px;
+        width: 220px;
+        height: 60px;
+      }
+
+      /* Slide-specific backgrounds */
+      .feature-battle { background-color: #000; }
+      .feature-battle .text-and-button { background: #000; }
+      .feature-battle .get-tickets-feature-1 { background-color: #FDB94A; color: #1b1406; }
+
+      .feature-demonslayer { background-color: #c8102e; }
+      .feature-demonslayer .text-and-button { background: #c8102e; }
+      .feature-demonslayer .get-tickets-feature-1 { background-color: #000; color: #fff; }
+
+      .feature-gabby { background-color: #f8a9d0; }
+      .feature-gabby .text-and-button { background: #f8a9d0; }
+      .feature-gabby .get-tickets-feature-1 { background-color: #00bfae; color: #000; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Header / Nav -->
+    <div class="header">
+      <nav>
         <a href="{% url 'bookings:movie_list' %}">
-            <button>Movies</button>
+          <img src="{% static 'bookings/cinetix2.png' %}" class="logo" alt="Cinetix" />
         </a>
-        <a href="{% url 'bookings:seat_booking' %}">
-            <button>Seat Booking</button>
+        <ul>
+          <li><a href="{% url 'bookings:movie_list' %}">Movies</a></li>
+          <li><a href="{% url 'bookings:booking_history' %}">My Tickets</a></li>
+          <li><a href="#">Theaters</a></li>
+        </ul>
+        <div class="user">
+          <img src="{% static 'bookings/user.png' %}" alt="user">
+          <a href="{% url 'bookings:booking_history' %}">User</a>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Main body -->
+    <div class="body movies-page">
+
+      <!-- Feature film SLIDER -->
+      <div class="feature-film-slider">
+        <button class="arrow left" id="prevBtn" aria-label="Previous feature">&#10094;</button>
+
+        <!-- Slide 1 - One Battle After Another (TMDB ID: 1054867) -->
+        <div class="feature-film feature-battle active" data-movie-id="1054867">
+          <img src="{% static 'bookings/one-battle-after-another-web.jpg' %}" class="feature-film-1" alt="One Battle After Another" />
+          <div class="text-and-button">
+            <p class="text">Your battle ends here.</p>
+            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+          </div>
+        </div>
+
+        <!-- Slide 2 - Demon Slayer: Infinity Castle (TMDB ID: 1311031) -->
+        <div class="feature-film feature-demonslayer" data-movie-id="1311031">
+          <img src="{% static 'bookings/demon slayer movie poster.webp' %}" class="feature-film-1" alt="Demon Slayer" />
+          <div class="text-and-button">
+            <p class="text">Heroes rise. Demons fall.</p>
+            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+          </div>
+        </div>
+
+        <!-- Slide 3 - Gabby's Dollhouse: The Movie (TMDB ID: 1280282) -->
+        <div class="feature-film feature-gabby" data-movie-id="1280282">
+          <img src="{% static 'bookings/gabbys dollhouse movie poster.webp' %}" class="feature-film-1" alt="Gabby's Dollhouse: The Movie" />
+          <div class="text-and-button">
+            <p class="text">A new adventure awaits – only in theaters</p>
+            <a href="#" class="get-tickets-feature-1">Get Tickets</a>
+          </div>
+        </div>
+
+        <button class="arrow right" id="nextBtn" aria-label="Next feature">&#10095;</button>
+      </div>
+
+      <!-- Movies row -->
+      <section class="movies">
+        <h2 class="section-title chewy-regular">Now Playing</h2>
+        <div id="movie-grid" class="movie-grid"></div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <h3>CINETIX</h3>
+          <p class="muted">Movie tickets, trailers &amp; showtimes.</p>
+        </div>
+        <div>
+          <h4>Movies</h4>
+          <a href="#">Features</a>
+          <a href="#">Now Playing</a>
+          <a href="#">Coming Soon</a>
+        </div>
+        <div>
+          <h4>About Us</h4>
+          <a href="#">Our Mission / Story</a>
+          <a href="#">Careers</a>
+        </div>
+        <div>
+          <h4>Support &amp; Contact</h4>
+          <a href="#">Contact Us</a>
+          <a href="#">FAQ</a>
+          <a href="#">Customer Service</a>
+        </div>
+        <div>
+          <h4>Legal &amp; Privacy</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Use</a>
+          <a href="#">Cookie Settings</a>
+          <a href="#">Licensing</a>
+          <a href="#">Information</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Card template -->
+    <template id="movie-card-tpl">
+      <article class="movie-card">
+        <a class="card-link" href="#" target="_self" rel="noopener">
+          <img class="poster" alt="" />
+          <h3 class="title chewy-regular"></h3>
         </a>
-        <a href="{% url 'bookings:booking_history' %}">
-            <button>Booking History</button>
-        </a>
-    </nav>
-</body>
+      </article>
+    </template>
+
+    <!-- API key from Django context -->
+    <script>
+      const API_KEY = "{{ TMDB_API_KEY }}";
+    </script>
+
+    <!-- Feature-film slider -->
+    <script>
+      (function () {
+        const films = document.querySelectorAll(".feature-film");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        let current = 0;
+
+        function showFilm(i) {
+          films.forEach((f, idx) => f.classList.toggle("active", idx === i));
+        }
+
+        prevBtn.addEventListener("click", () => {
+          current = (current - 1 + films.length) % films.length;
+          showFilm(current);
+        });
+
+        nextBtn.addEventListener("click", () => {
+          current = (current + 1) % films.length;
+          showFilm(current);
+        });
+
+        showFilm(current);
+      })();
+    </script>
+
+    <!-- TMDB now playing -->
+    <script>
+      (function () {
+        const LIST     = "now_playing";
+        const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+
+        const grid = document.getElementById("movie-grid");
+        const tpl  = document.getElementById("movie-card-tpl");
+
+        async function fetchList(page = 1) {
+          const url = `https://api.themoviedb.org/3/movie/${LIST}?api_key=${API_KEY}&language=en-US&page=${page}`;
+          const res = await fetch(url);
+          if (!res.ok) {
+            console.error("TMDB Error:", res.status, await res.text());
+            return { results: [] };
+          }
+          return res.json();
+        }
+
+        function addCard(movie) {
+          const node  = tpl.content.cloneNode(true);
+          const link  = node.querySelector(".card-link");
+          const img   = node.querySelector(".poster");
+          const title = node.querySelector(".title");
+
+          // Django URL pattern
+          link.href = `/bookings/movie/${movie.id}/`;
+          link.setAttribute("aria-label", movie.title || "Movie");
+
+          img.src = movie.poster_path ? (IMG_BASE + movie.poster_path) : "{% static 'bookings/fallback-poster.jpg' %}";
+          img.alt = movie.title || "Movie";
+          title.textContent = movie.title || "Untitled";
+
+          grid.appendChild(node);
+        }
+
+        (async () => {
+          try {
+            const data = await fetchList(1);
+            data.results.slice(0, 5).forEach(addCard);
+          } catch (e) {
+            console.error(e);
+          }
+        })();
+      })();
+    </script>
+  </body>
 </html>
