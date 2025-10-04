@@ -290,13 +290,25 @@
     const buyBtn = document.getElementById("buyBtn");
 
     function qid(){ 
-      // Check URL params first (?id=123)
       const urlParam = new URLSearchParams(location.search).get("id");
       if (urlParam) return urlParam;
-      
-      // Check Django URL pattern (/movie/123/)
       const match = location.pathname.match(/\/movie\/(\d+)\/?$/);
       return match ? match[1] : null;
+    }
+    
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
     }
     
     function minsToHM(mins){ if(mins==null) return "–"; const h=Math.floor(mins/60), m=mins%60; return `${h}h ${m}m`; }
@@ -310,6 +322,7 @@
     let currentCategory = "now_playing";
     let currentPage = 1;
     let totalPages = 1;
+    let currentDetails = null; // Store current movie details
 
     async function fetchList(category="now_playing", page=1){
       const safe = ["now_playing","popular","top_rated","upcoming"].includes(category) ? category : "now_playing";
@@ -388,6 +401,7 @@
       listView.hidden = true; detailView.hidden = false;
 
       const [details,videos] = await Promise.all([fetchDetails(id), fetchVideos(id)]);
+      currentDetails = details; // Store for later use
 
       dTitle.textContent   = details.title || "Movie";
       dPoster.src          = details.poster_path ? IMG_BASE+details.poster_path : "{% static 'bookings/fallback-poster.jpg' %}";
@@ -417,19 +431,66 @@
         btn.classList.add("selected"); selection.time = btn.textContent.trim(); updateSummary();
       };
 
-      buyBtn.onclick = ()=>{
-        if(!(selection.date && selection.theater && selection.time)) return;
+      buyBtn.onclick = async ()=>{
+        if(!(selection.date && selection.theater && selection.time && currentDetails)) return;
 
-        const params = new URLSearchParams({
-          id: String(details.id ?? id),
-          title: details.title || "Movie",
-          poster: dPoster.src || "",
-          date: selection.date,
-          time: selection.time,
-          theater: selection.theater || ""
-        });
+        // Convert time from "7:00pm" to "19:00:00"
+        const timeParts = selection.time.match(/(\d+):(\d+)(am|pm)/i);
+        if (!timeParts) {
+          alert('Invalid time format');
+          return;
+        }
+        
+        let hours = parseInt(timeParts[1]);
+        const minutes = timeParts[2];
+        const period = timeParts[3].toLowerCase();
+        
+        if (period === 'pm' && hours !== 12) hours += 12;
+        if (period === 'am' && hours === 12) hours = 0;
+        
+        const time24 = `${hours.toString().padStart(2, '0')}:${minutes}:00`;
 
-        window.location.href = `/seat-booking/?${params.toString()}`;
+        try {
+          // Create or get the showing
+          const response = await fetch('/api/get-or-create-showing/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+              tmdb_id: currentDetails.id,
+              title: currentDetails.title,
+              description: currentDetails.overview || '',
+              theater: selection.theater,
+              show_date: selection.date,
+              show_time: time24
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create showing');
+          }
+          
+          const data = await response.json();
+          
+          // Redirect to seat booking with showing_id
+          const params = new URLSearchParams({
+            showing_id: data.showing_id,
+            title: currentDetails.title || "Movie",
+            poster: dPoster.src || "",
+            date: selection.date,
+            time: selection.time,
+            theater: selection.theater || ""
+          });
+
+          window.location.href = `/seat-booking/?${params.toString()}`;
+          
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Failed to create booking session: ' + error.message);
+        }
       };
     }
 

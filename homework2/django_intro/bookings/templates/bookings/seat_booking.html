@@ -301,6 +301,7 @@
 
   <script>
     function getBookingParams(){
+      const USER_ID = 1;  /* fake sign in user */
       const p = new URLSearchParams(location.search);
       const rawDate   = p.get("date");
       const dateObj   = rawDate ? new Date(rawDate + "T12:00:00") : null;
@@ -309,14 +310,13 @@
         : null;
 
       return {
-        id: p.get("id") || "",
+        showing_id: p.get("showing_id") || "",
         title: p.get("title") || "Movie",
         poster: p.get("poster") || "{% static 'bookings/fallback-poster.jpg' %}",
         dateISO: rawDate || "",
         dateNice: niceDate || "",
         time: p.get("time") || "",
-        theater: p.get("theater") || "",
-        runtimeMins: Number(p.get("runtimeMins") || 0)
+        theater: p.get("theater") || ""
       };
     }
 
@@ -326,18 +326,19 @@
       w.style.display = 'block';
     }
 
-    function minsToHM(mins){
-      if(!mins || isNaN(mins)) return "";
-      const h = Math.floor(mins/60), m = mins % 60;
-      return `${h} hr ${m} min`;
-    }
-
-    function keyToLabel(key){
-      const [rPart, cPart] = key.split("-");
-      const r = parseInt(rPart.replace("R",""), 10);
-      const c = parseInt(cPart.replace("C",""), 10);
-      const letter = String.fromCharCode(64 + r);
-      return `${letter}${c}`;
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
     }
 
     function populateFromParams(){
@@ -347,10 +348,9 @@
       const bTitle  = document.getElementById("bTitle");
       const bWhen   = document.getElementById("bWhen");
       const bWhere  = document.getElementById("bWhere");
-      const bRuntime= document.getElementById("bRuntime");
 
-      if(!info.title || !info.dateISO || !info.time || !info.theater){
-        showWarning("Missing booking details in the link. Please go back and select a date, theater and time again.");
+      if(!info.showing_id || !info.title || !info.dateISO || !info.time || !info.theater){
+        showWarning("Missing booking details. Please go back and select a date, theater and time again.");
       }
 
       bTitle.textContent = info.title;
@@ -358,18 +358,10 @@
       bPoster.alt = info.title;
       bWhen.textContent = (info.dateNice && info.time) ? `${info.dateNice} • ${info.time}` : "–";
       bWhere.textContent = info.theater || "–";
-      bRuntime.textContent = minsToHM(info.runtimeMins) || "–";
     }
 
     const PRICE = 14.50;
-    const rows = 10, cols = 16;
-
-    const reservedSet = new Set([
-      "R1-C4","R1-C5","R1-C6","R1-C7",
-      "R4-C3","R4-C14",
-      "R6-C8","R6-C9",
-      "R8-C1","R8-C16"
-    ]);
+    const USER_ID = 2; // Hardcoded user ID - change to your actual admin user ID
 
     const seatGrid = document.getElementById('seats');
     const sumSeats = document.getElementById('sumSeats');
@@ -378,29 +370,64 @@
     const btnBuy = document.getElementById('btnBuy');
 
     const selected = new Set();
+    let seatMap = {}; // Maps seat labels (A1) to seat IDs from database
+
+    async function loadSeats(){
+      const info = getBookingParams();
+      
+      if (!info.showing_id) {
+        showWarning("No showing selected.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/seats/by_showing/?showing_id=${info.showing_id}`);
+        if (!response.ok) throw new Error('Failed to load seats');
+        
+        const seats = await response.json();
+
+        console.log('Loaded seats:', seats);  // ADD THIS DEBUG LINE
+        console.log('Total seats:', seats.length);  // ADD THIS DEBUG LINE   
+        
+        // Build seat map
+        seats.forEach(seat => {
+          seatMap[seat.seat_number] = {
+            id: seat.id,
+            booked: seat.booking_status
+          };
+        });
+
+        buildSeats();
+        
+      } catch (error) {
+        console.error('Error loading seats:', error);
+        showWarning('Failed to load seat availability. Please try again.');
+      }
+    }
 
     function buildSeats(){
       seatGrid.innerHTML = "";
 
-      for(let r=1; r<=rows; r++){
-        for(let c=1; c<=cols; c++){
-          const key = `R${r}-C${c}`;
+      for(let r=1; r<=10; r++){
+        for(let c=1; c<=16; c++){
+          const rowLetter = String.fromCharCode(64 + r); // A-J
+          const seatLabel = `${rowLetter}${c}`;
+          
           const div = document.createElement('button');
           div.type = "button";
           div.className = "seat";
           div.setAttribute('role','gridcell');
-          div.setAttribute('aria-label', `Row ${r} Seat ${c}`);
-          div.dataset.key = key;
+          div.setAttribute('aria-label', `Seat ${seatLabel}`);
+          div.dataset.label = seatLabel;
 
-          if(reservedSet.has(key)){
+          const seatData = seatMap[seatLabel];
+          
+          if(seatData && seatData.booked){
             div.classList.add('reserved');
             div.setAttribute('aria-disabled','true');
           }else{
             div.setAttribute('aria-checked','false');
             div.addEventListener('click', onSeatClick);
-            div.addEventListener('keydown', (e)=>{
-              if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onSeatClick.call(div); }
-            });
           }
 
           seatGrid.appendChild(div);
@@ -409,15 +436,15 @@
     }
 
     function onSeatClick(){
-      const key = this.dataset.key;
+      const label = this.dataset.label;
       const checked = this.getAttribute('aria-checked') === 'true';
 
       if(checked){
         this.setAttribute('aria-checked','false');
-        selected.delete(key);
+        selected.delete(label);
       }else{
         this.setAttribute('aria-checked','true');
-        selected.add(key);
+        selected.add(label);
       }
       updateSummary();
     }
@@ -425,63 +452,56 @@
     function updateSummary(){
       const count  = selected.size;
       const amount = count * PRICE;
-      const labels = [...selected].map(keyToLabel);
+      const labels = [...selected];
 
       sumSeats.textContent = count ? labels.join(', ') : '–';
-      sumAmount.textContent = `${amount.toFixed(2)}`;
-      sumTotal.textContent  = `${amount.toFixed(2)}`;
+      sumAmount.textContent = `$${amount.toFixed(2)}`;
+      sumTotal.textContent  = `$${amount.toFixed(2)}`;
       btnBuy.disabled = count === 0;
     }
 
-    populateFromParams();
-    buildSeats();
-    updateSummary();
+    btnBuy.addEventListener("click", async () => {
+      const seatLabels = Array.from(selected);
+      if (seatLabels.length === 0) return;
 
-    btnBuy.addEventListener("click", () => {
-      const seatKeys = Array.from(selected);
-      if (seatKeys.length === 0) return;
-
-      const info = getBookingParams();
-
-      const ticket = {
-        id: info.id,
-        title: info.title,
-        poster: info.poster,
-        theater: info.theater,
-        showDateISO: info.dateISO,
-        showTime: info.time,
-        runtimeMins: info.runtimeMins,
-        seats: seatKeys,
-        seatLabels: seatKeys.map(keyToLabel),
-        purchasedAtISO: new Date().toISOString()
-      };
-
-      const KEY = "cinetix_tickets";
-      let list = [];
       try {
-        list = JSON.parse(localStorage.getItem(KEY) || "[]");
-        if (!Array.isArray(list)) list = [];
-      } catch { list = []; }
+        // Create bookings for each selected seat
+        for (const label of seatLabels) {
+          const seatData = seatMap[label];
+          
+          if (!seatData) {
+            throw new Error(`Seat ${label} not found`);
+          }
 
-      const i = list.findIndex(t =>
-        t.id === ticket.id &&
-        t.showDateISO === ticket.showDateISO &&
-        t.showTime === ticket.showTime &&
-        t.theater === ticket.theater
-      );
-      if (i >= 0) {
-        const mergedSeatKeys = Array.from(new Set([...(list[i].seats || []), ...ticket.seats]));
-        const mergedSeatLabels = Array.from(new Set([...(list[i].seatLabels || []), ...ticket.seatLabels]));
-        list[i] = { ...list[i], seats: mergedSeatKeys, seatLabels: mergedSeatLabels, purchasedAtISO: ticket.purchasedAtISO };
-      } else {
-        list.push(ticket);
+          const response = await fetch('/api/bookings/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+              user: USER_ID,
+              seat: seatData.id
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || `Failed to book seat ${label}`);
+          }
+        }
+
+        alert('Thank you for your purchase! Your booking has been saved.');
+        window.location.href = "{% url 'bookings:booking_history' %}";
+        
+      } catch (error) {
+        console.error('Booking error:', error);
+        alert('Booking failed: ' + error.message);
       }
-
-      localStorage.setItem(KEY, JSON.stringify(list));
-
-      alert('Thank you for your purchase!')
-      window.location.href = "{% url 'bookings:movie_list' %}";
     });
+
+    populateFromParams();
+    loadSeats();
   </script>
 </body>
 </html>

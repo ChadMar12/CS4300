@@ -14,19 +14,12 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-#from django.contrib import admin
+from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    # #path('admin/', admin.site.urls),
-    # path('', include('bookings.urls')),
-    # path("bookings/", include(("bookings.pages_urls", "bookings"), namespace="bookings")),
-
-
-    # Templates (your styled pages) at the site root:
+    path('admin/', admin.site.urls),
     path("", include("bookings.pages_urls")),
-
-    # DRF API under /api/...
     path("api/", include("bookings.urls")),
     
 ]

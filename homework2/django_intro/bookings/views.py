@@ -1,52 +1,38 @@
-# from rest_framework import viewsets, permissions
-# from .models import Movie, Seat, Booking
-# from .serializers import MovieSerializer, SeatSerializer, BookingSerializer
-
-# # MovieViewSet: For CRUD operations on movies.
-# # Empty for the time being
-# class MovieViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = Movie.objects.all()
-#     serializer_class = MovieSerializer
-#     permissions_classes = [permissions.AllowAny]
-
-# # SeatViewSet: For seat availability and booking.
-# class SeatViewSet(viewsets.ModelViewSet): 
-#     queryset = Seat.objects.all() 
-#     serializer_class = SeatSerializer
-#     permissions_classes = [permissions.AllowAny]
-
-# # BookingViewSet: For users to book seats and view their booking history.
-# class BookingViewSet(viewsets.ModelViewSet): 
-#     queryset = Booking.objects.all() 
-#     serializer_class = BookingSerializer
-#     permissions_classes = [permissions.AllowAny]
-
-#     def create(self, serializer):
-#         booking = serializer.save()
-#         seat = booking.seat
-
-#     def delete(self, instance):
-#         seat = instance.seat
-#         super().perform_destory(instance)
-#         seat.booking_status = False
-#         seat.save(update_fields=['booking status'])
-
-# bookings/views.py
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
+from rest_framework.decorators import action, api_view , permission_classes 
 from django.db import transaction
-from .models import Movie, Seat, Booking
-from .serializers import MovieSerializer, SeatSerializer, BookingSerializer
+from .models import Movie, Showing, Seat, Booking
+from .serializers import MovieSerializer, ShowingSerializer, SeatSerializer, BookingSerializer
+from rest_framework.permissions import AllowAny
+import datetime
 
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
     permission_classes = [permissions.AllowAny]
 
+# Added to get practice with api's
+class ShowingViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Showing.objects.all()
+    serializer_class = ShowingSerializer
+    permission_classes = [permissions.AllowAny]
+
 class SeatViewSet(viewsets.ModelViewSet):
     queryset = Seat.objects.all()
     serializer_class = SeatSerializer
     permission_classes = [permissions.AllowAny]
+    
+    @action(detail=False, methods=['get'])
+    def by_showing(self, request):
+        """Get all seats for a specific showing: /api/seats/by_showing/?showing_id=1"""
+        showing_id = request.query_params.get('showing_id')
+        if not showing_id:
+            return Response({'error': 'showing_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        seats = Seat.objects.filter(showing_id=showing_id)
+        serializer = self.get_serializer(seats, many=True)
+        return Response(serializer.data)
 
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
@@ -57,7 +43,6 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         seat = serializer.validated_data["seat"]
         if seat.booking_status:
-            # prevent double-booking
             raise ValueError("Seat is already booked.")
         booking = serializer.save()
         seat.booking_status = True
@@ -69,3 +54,59 @@ class BookingViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
         seat.booking_status = False
         seat.save(update_fields=["booking_status"])
+
+# This function is for creating or showing for booking dynamically
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Add this line
+def get_or_create_showing(request):
+    """
+    Create or fetch a showing for booking.
+    Expects: tmdb_id, title, theater, show_date, show_time
+    Returns: showing_id
+    """
+    tmdb_id = request.data.get('tmdb_id')
+    title = request.data.get('title')
+    theater = request.data.get('theater')
+    show_date = request.data.get('show_date')
+    show_time = request.data.get('show_time')
+    
+    if not all([tmdb_id, title, theater, show_date, show_time]):
+        return Response({'error': 'Missing required fields'}, status=400)
+    
+    # Get or create movie
+    movie, created = Movie.objects.get_or_create(
+        tmdb_id=tmdb_id,
+        defaults={
+            'title': title,
+            'description': request.data.get('description', ''),
+            'duration': datetime.time(2, 0, 0)
+        }
+    )
+    
+    # Get or create showing
+    showing, created = Showing.objects.get_or_create(
+        movie=movie,
+        theater_name=theater,
+        show_date=show_date,
+        show_time=show_time
+    )
+    
+    # If newly created, generate seats
+    if created:
+        for row in range(1, 11):
+            for col in range(1, 17):
+                row_letter = chr(64 + row)
+                seat_label = f"{row_letter}{col}"
+                Seat.objects.create(
+                    showing=showing,
+                    seat_number=seat_label,
+                    booking_status=False
+                )
+    
+    return Response({
+        'showing_id': showing.id,
+        'movie_id': movie.id,
+        'seats_created': created
+    })

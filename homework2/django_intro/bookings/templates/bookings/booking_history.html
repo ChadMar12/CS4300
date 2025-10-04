@@ -76,7 +76,7 @@
     <div class="tickets">
       <div class="tickets-header">
         <h1>My Tickets</h1>
-        <button id="btnClear" class="btn-clear" title="Remove all saved tickets">Clear all tickets</button>
+        <button id="btnClear" class="btn-clear" title="Remove all bookings" disabled>Clear all tickets</button>
       </div>
 
       <div class="ticket-list" id="ticketList"></div>
@@ -90,7 +90,6 @@
           <div class="ticket-title"></div>
           <div class="ticket-meta theater"></div>
           <div class="ticket-meta datetime"></div>
-          <div class="ticket-meta runtime"></div>
           <div class="seat-badges"></div>
         </div>
         <div class="ticket-chevron">›</div>
@@ -134,69 +133,113 @@
   </footer>
 
   <script>
+    const API_KEY = "{{ TMDB_API_KEY }}";
+    const IMG_BASE = "https://image.tmdb.org/t/p/w500";
     const listEl = document.getElementById("ticketList");
     const tpl = document.getElementById("ticketTpl");
     const btnClear = document.getElementById("btnClear");
     const IMG_FALLBACK = "{% static 'bookings/fallback-poster.jpg' %}";
-    const KEY = "cinetix_tickets";
 
-    function minsToHM(mins){
-      if(!mins || isNaN(mins)) return "";
-      const h = Math.floor(mins/60), m = mins % 60;
-      return `${h} hr ${m} min`;
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
     }
-    function formatDateNice(iso){
-      if(!iso) return "";
-      const d = new Date(iso + "T00:00:00");
-      return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
+
+    function formatDateNice(isoDateTime){
+      if(!isoDateTime) return "";
+      const d = new Date(isoDateTime);
+      return new Intl.DateTimeFormat(undefined, { 
+        month: "short", 
+        day: "numeric",
+        year: "numeric"
+      }).format(d);
     }
-    function keyToLabel(key){
-      const [rPart, cPart] = String(key).split("-");
-      const r = parseInt((rPart||"").replace("R",""), 10);
-      const c = parseInt((cPart||"").replace("C",""), 10);
-      if (isNaN(r) || isNaN(c)) return String(key);
-      const letter = String.fromCharCode(64 + r);
-      return `${letter}${c}`;
+
+    async function fetchMovieDetails(tmdbId) {
+      try {
+        const url = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${API_KEY}&language=en-US`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch {
+        return null;
+      }
     }
-    function renderSeatBadges(container, ticket){
-      const labels = Array.isArray(ticket.seatLabels) && ticket.seatLabels.length
-        ? ticket.seatLabels
-        : (Array.isArray(ticket.seats) ? ticket.seats.map(keyToLabel) : []);
-      container.innerHTML = "";
-      if (!labels.length) return;
-      labels.forEach(lbl=>{
-        const span = document.createElement("span");
-        span.className = "seat-badge";
-        span.textContent = lbl;
-        container.appendChild(span);
-      });
+
+    async function fetchShowingDetails(showingId) {
+      try {
+        const response = await fetch(`/api/showings/${showingId}/`);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch {
+        return null;
+      }
     }
-    function renderTicket(t){
+
+    async function renderTicket(booking){
       const node = tpl.content.cloneNode(true);
-      node.querySelector(".ticket-poster").src = t.poster || IMG_FALLBACK;
-      node.querySelector(".ticket-poster").alt = t.title || "Movie poster";
-      node.querySelector(".ticket-title").textContent = t.title || "Untitled";
-      node.querySelector(".theater").textContent = t.theater || "";
-
-      const niceDate = formatDateNice(t.showDateISO);
-      node.querySelector(".datetime").textContent =
-        (niceDate && t.showTime) ? `${niceDate} • ${t.showTime}` : (t.showTime || niceDate || "");
-
-      node.querySelector(".runtime").textContent = minsToHM(t.runtimeMins);
-      renderSeatBadges(node.querySelector(".seat-badges"), t);
+      
+      // Get showing details to find the movie's TMDB ID
+      const showing = await fetchShowingDetails(booking.showing_id);
+      
+      let poster = IMG_FALLBACK;
+      let title = booking.movie_title || "Movie";
+      
+      if (showing && showing.movie) {
+        // Fetch TMDB details if we have a tmdb_id
+        const movieDetails = await fetchMovieDetails(showing.movie);
+        if (movieDetails) {
+          title = movieDetails.title || title;
+          poster = movieDetails.poster_path ? IMG_BASE + movieDetails.poster_path : IMG_FALLBACK;
+        }
+      }
+      
+      node.querySelector(".ticket-poster").src = poster;
+      node.querySelector(".ticket-poster").alt = title + " poster";
+      node.querySelector(".ticket-title").textContent = title;
+      
+      if (showing) {
+        node.querySelector(".theater").textContent = showing.theater_name || "";
+        const dateStr = formatDateNice(showing.show_date);
+        const timeStr = showing.show_time || "";
+        node.querySelector(".datetime").textContent = 
+          (dateStr && timeStr) ? `${dateStr} • ${timeStr}` : (dateStr || timeStr || "");
+      }
+      
+      const seatBadge = document.createElement("span");
+      seatBadge.className = "seat-badge";
+      seatBadge.textContent = booking.seat_number || "Seat";
+      node.querySelector(".seat-badges").appendChild(seatBadge);
+      
       listEl.appendChild(node);
     }
-    function loadTickets(){
-      let tickets = [];
+
+    async function loadTickets(){
       try {
-        tickets = JSON.parse(localStorage.getItem(KEY) || "[]");
-        if (!Array.isArray(tickets)) tickets = [];
-      } catch { tickets = []; }
-      return tickets;
+        const response = await fetch('/api/bookings/');
+        if (!response.ok) throw new Error('Failed to load bookings');
+        const bookings = await response.json();
+        return bookings;
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+        return [];
+      }
     }
-    function renderTickets(tickets){
+
+    async function renderTickets(bookings){
       listEl.innerHTML = "";
-      if(!tickets.length){
+      
+      if(!bookings.length){
         const empty = document.createElement("p");
         empty.className = "tickets-empty";
         empty.textContent = "No tickets yet. Buy one and it will show here.";
@@ -204,17 +247,43 @@
         btnClear.disabled = true;
         return;
       }
+      
       btnClear.disabled = false;
-      tickets.sort((a,b)=> new Date(b.purchasedAtISO) - new Date(a.purchasedAtISO));
-      tickets.forEach(renderTicket);
+      
+      // Sort by booking date (newest first)
+      bookings.sort((a,b)=> new Date(b.booking_date) - new Date(a.booking_date));
+      
+      // Render each booking
+      for (const booking of bookings) {
+        await renderTicket(booking);
+      }
     }
-    function loadAndRender(){
-      renderTickets(loadTickets());
+
+    async function loadAndRender(){
+      const bookings = await loadTickets();
+      await renderTickets(bookings);
     }
-    function clearAllTickets(){
-      if(!confirm("Clear all saved tickets? This cannot be undone.")) return;
-      localStorage.removeItem(KEY);
-      loadAndRender();
+
+    async function clearAllTickets(){
+      if(!confirm("Delete all bookings? This cannot be undone.")) return;
+      
+      try {
+        const bookings = await loadTickets();
+        
+        for (const booking of bookings) {
+          await fetch(`/api/bookings/${booking.id}/`, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken')
+            }
+          });
+        }
+        
+        await loadAndRender();
+      } catch (error) {
+        console.error('Error deleting bookings:', error);
+        alert('Failed to delete bookings. Please try again.');
+      }
     }
 
     btnClear.addEventListener("click", clearAllTickets);

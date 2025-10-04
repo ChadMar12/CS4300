@@ -29,7 +29,7 @@ TMDB_API_KEY = config('TMDB_API_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = ['app-cs4300-19.devedu.io']
-
+CSRF_TRUSTED_ORIGINS = ['https://app-cs4300-19.devedu.io']
 
 # Application definition
 
