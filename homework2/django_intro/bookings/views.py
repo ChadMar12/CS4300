@@ -12,7 +12,6 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MovieSerializer
     permission_classes = [permissions.AllowAny]
 
-# Added to get practice with api's
 class ShowingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Showing.objects.all()
     serializer_class = ShowingSerializer
@@ -55,11 +54,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         seat.booking_status = False
         seat.save(update_fields=["booking_status"])
 
-# This function is for creating or showing for booking dynamically
-
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Add this line
+@permission_classes([AllowAny])
 def get_or_create_showing(request):
     """
     Create or fetch a showing for booking.
@@ -86,27 +83,30 @@ def get_or_create_showing(request):
     )
     
     # Get or create showing
-    showing, created = Showing.objects.get_or_create(
+    showing, showing_created = Showing.objects.get_or_create(
         movie=movie,
         theater_name=theater,
         show_date=show_date,
         show_time=show_time
     )
     
-    # If newly created, generate seats
-    if created:
+    # If newly created, generate seats using bulk_create for performance
+    if showing_created:
+        seats = []
         for row in range(1, 11):
             for col in range(1, 17):
                 row_letter = chr(64 + row)
                 seat_label = f"{row_letter}{col}"
-                Seat.objects.create(
+                seats.append(Seat(
                     showing=showing,
                     seat_number=seat_label,
                     booking_status=False
-                )
+                ))
+        # Use bulk_create - one database query instead of 160!
+        Seat.objects.bulk_create(seats)
     
     return Response({
         'showing_id': showing.id,
         'movie_id': movie.id,
-        'seats_created': created
+        'seats_created': showing_created
     })

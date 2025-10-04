@@ -20,7 +20,8 @@ def movie_detail(request, movie_id):
     })
 
 def booking_history(request):
-    return render(request, 'bookings/booking_history.html')
-
+    return render(request, 'bookings/booking_history.html', {
+        'TMDB_API_KEY': settings.TMDB_API_KEY  # ADD THIS LINE
+    })
 def seat_booking(request):
     return render(request, 'bookings/seat_booking.html')
