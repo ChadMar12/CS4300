@@ -28,7 +28,8 @@ SECRET_KEY = 'django-insecure-gi=1*uu=^$*+t$s9+v7nbx)gvt#157kns1==!9o2e!v9%_otqf
 TMDB_API_KEY = config('TMDB_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# DEBUG = False
+config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = [
     "localhost", "127.0.0.1",
