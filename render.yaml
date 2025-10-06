@@ -3,13 +3,15 @@ databases:
     plan: free
     databaseName: movie_theater_booking
     user: movie_theater_booking_user
+
 services:
   - type: web
     plan: free
-    name: movie-theater-booking
+    name: cinetix
     runtime: python
+    rootDir: homework2/django_intro
     buildCommand: './build.sh'
-    startCommand: 'python -m gunicorn movie_theater_booking.asgi:application -k uvicorn.workers.UvicornWorker'
+    startCommand: sh -c "python manage.py migrate --noinput && gunicorn --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT movie_theater_booking.asgi:application"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -20,4 +22,4 @@ services:
       - key: WEB_CONCURRENCY
         value: 4
       - key: PYTHON_VERSION
-        value: 3.12.6       
+        value: 3.12.6
