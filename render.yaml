@@ -11,6 +11,7 @@ services:
     runtime: python
     rootDir: homework2/django_intro
     buildCommand: './build.sh'
+    preDeployCommand: "python manage.py migrate --noinput"
     startCommand: >
       python -m gunicorn movie_theater_booking.asgi:application
       -k uvicorn.workers.UvicornWorker
