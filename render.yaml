@@ -8,7 +8,7 @@ services:
     plan: free
     name: cinetix
     runtime: python
-    rootDirectory: homework2/django_intro
+    rootDir: homework2/django_intro
     buildCommand: './build.sh'
     startCommand: 'python -m gunicorn movie_theater_booking.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
