@@ -10,15 +10,11 @@ services:
     name: cinetix
     runtime: python
     rootDir: homework2/django_intro
-
     buildCommand: './build.sh'
     startCommand: >
       python -m gunicorn movie_theater_booking.asgi:application
       -k uvicorn.workers.UvicornWorker
       --bind 0.0.0.0:$PORT
-      --workers ${WEB_CONCURRENCY:-2}
-      --timeout 120
-
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -30,7 +26,3 @@ services:
         value: 4
       - key: PYTHON_VERSION
         value: 3.12.6
-      - key: DJANGO_SETTINGS_MODULE
-        value: movie_theater_booking.settings
-      - key: TMDB_API_KEY
-        sync: false
