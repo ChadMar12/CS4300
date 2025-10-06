@@ -301,7 +301,6 @@
 
   <script>
     function getBookingParams(){
-      const USER_ID = 1;  /* fake sign in user */
       const p = new URLSearchParams(location.search);
       const rawDate   = p.get("date");
       const dateObj   = rawDate ? new Date(rawDate + "T12:00:00") : null;
@@ -361,7 +360,6 @@
     }
 
     const PRICE = 14.50;
-    const USER_ID = 2; // Hardcoded user ID - change to your actual admin user ID
 
     const seatGrid = document.getElementById('seats');
     const sumSeats = document.getElementById('sumSeats');
@@ -370,11 +368,11 @@
     const btnBuy = document.getElementById('btnBuy');
 
     const selected = new Set();
-    let seatMap = {}; // Maps seat labels (A1) to seat IDs from database
+    let seatMap = {}; // seatLabel -> { id, booked }
 
     async function loadSeats(){
       const info = getBookingParams();
-      
+
       if (!info.showing_id) {
         showWarning("No showing selected.");
         return;
@@ -383,13 +381,11 @@
       try {
         const response = await fetch(`/api/seats/by_showing/?showing_id=${info.showing_id}`);
         if (!response.ok) throw new Error('Failed to load seats');
-        
+
         const seats = await response.json();
 
-        console.log('Loaded seats:', seats);  // ADD THIS DEBUG LINE
-        console.log('Total seats:', seats.length);  // ADD THIS DEBUG LINE   
-        
-        // Build seat map
+        // Build label -> {id, booked} map
+        seatMap = {};
         seats.forEach(seat => {
           seatMap[seat.seat_number] = {
             id: seat.id,
@@ -398,7 +394,6 @@
         });
 
         buildSeats();
-        
       } catch (error) {
         console.error('Error loading seats:', error);
         showWarning('Failed to load seat availability. Please try again.');
@@ -412,7 +407,7 @@
         for(let c=1; c<=16; c++){
           const rowLetter = String.fromCharCode(64 + r); // A-J
           const seatLabel = `${rowLetter}${c}`;
-          
+
           const div = document.createElement('button');
           div.type = "button";
           div.className = "seat";
@@ -421,7 +416,7 @@
           div.dataset.label = seatLabel;
 
           const seatData = seatMap[seatLabel];
-          
+
           if(seatData && seatData.booked){
             div.classList.add('reserved');
             div.setAttribute('aria-disabled','true');
@@ -460,48 +455,73 @@
       btnBuy.disabled = count === 0;
     }
 
+    // Helper: pull the most helpful error message from a DRF response
+    async function extractError(res){
+      try{
+        const data = await res.json();
+        if (typeof data === 'string') return data;
+        if (data.detail) return data.detail;
+        // find first field error
+        for (const [k,v] of Object.entries(data)){
+          if (Array.isArray(v) && v.length) return `${k}: ${v[0]}`;
+          if (typeof v === 'string') return `${k}: ${v}`;
+        }
+      }catch(_){}
+      return `HTTP ${res.status}`;
+    }
+
     btnBuy.addEventListener("click", async () => {
       const seatLabels = Array.from(selected);
       if (seatLabels.length === 0) return;
 
+      const info = getBookingParams();
+
       try {
-        // Create bookings for each selected seat
         for (const label of seatLabels) {
           const seatData = seatMap[label];
-          
-          if (!seatData) {
-            throw new Error(`Seat ${label} not found`);
-          }
+          if (!seatData) throw new Error(`Seat ${label} not found`);
 
-          const response = await fetch('/api/bookings/', {
+          // POST the seat PK (backend attaches user/fallback)
+          const res = await fetch('/api/bookings/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRFToken': getCookie('csrftoken')
+              'X-CSRFToken': getCookie('csrftoken') || ''
             },
-            body: JSON.stringify({
-              user: USER_ID,
-              seat: seatData.id
-            })
+            credentials: 'same-origin',
+            body: JSON.stringify({ seat: seatData.id })
           });
 
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || `Failed to book seat ${label}`);
+          if (!res.ok) {
+            const msg = await extractError(res);
+            throw new Error(msg || `Failed to book seat ${label}`);
           }
+
+          // Success: lock the seat in UI
+          const btn = seatGrid.querySelector(`.seat[data-label="${label}"]`);
+          if (btn){
+            btn.classList.add('reserved');
+            btn.setAttribute('aria-disabled','true');
+            btn.removeEventListener('click', onSeatClick);
+          }
+          selected.delete(label);
         }
 
+        updateSummary();
         alert('Thank you for your purchase! Your booking has been saved.');
         window.location.href = "{% url 'bookings:booking_history' %}";
-        
+
       } catch (error) {
         console.error('Booking error:', error);
         alert('Booking failed: ' + error.message);
       }
     });
 
-    populateFromParams();
-    loadSeats();
+    function init(){
+      populateFromParams();
+      loadSeats();
+    }
+    init();
   </script>
 </body>
 </html>
