@@ -7,6 +7,10 @@ from .serializers import MovieSerializer, ShowingSerializer, SeatSerializer, Boo
 from rest_framework.permissions import AllowAny
 import datetime
 
+# >>> ADDED IMPORTS (minimal) <<<
+from django.contrib.auth.models import User   # NEW
+import os                                     # NEW
+
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
@@ -40,10 +44,19 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
+        # >>> ADDED: fallback user for anonymous visitors <<<
+        fallback_username = os.getenv("BOOKING_GUEST_USERNAME", "guest")
+        user = (
+            self.request.user
+            if self.request.user.is_authenticated
+            else User.objects.get_or_create(username=fallback_username, defaults={"is_active": True})[0]
+        )
+        # -----------------------------------------------
+
         seat = serializer.validated_data["seat"]
         if seat.booking_status:
             raise ValueError("Seat is already booked.")
-        booking = serializer.save()
+        booking = serializer.save(user=user)   # <<< ADDED: attach user to the booking
         seat.booking_status = True
         seat.save(update_fields=["booking_status"])
         return booking
