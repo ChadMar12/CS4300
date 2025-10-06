@@ -11,11 +11,11 @@ services:
     runtime: python
     rootDir: homework2/django_intro
     buildCommand: './build.sh'
-    preDeployCommand: "python manage.py migrate --noinput"
     startCommand: >
-      python -m gunicorn movie_theater_booking.asgi:application
-      -k uvicorn.workers.UvicornWorker
-      --bind 0.0.0.0:$PORT
+      sh -c "python manage.py migrate --noinput &&
+             python -m gunicorn movie_theater_booking.asgi:application
+             -k uvicorn.workers.UvicornWorker
+             --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
