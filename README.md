@@ -2,7 +2,7 @@
 
 A RESTful Movie Theater Booking Application built with Python and Django that integrates with The Movie Database (TMDB) API.
 
-# Render Host
+# Cinetix Demo site 
 https://cinetix-vqow.onrender.com/
 
 ## Features
